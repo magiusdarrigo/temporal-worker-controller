@@ -15,7 +15,7 @@ spec:
   cutover:
     strategy: AllAtOnce
   # Desired number of worker replicas
-  replicas: 1
+  replicas: 3
   # Desired specification for worker pods
   template:
     metadata:
@@ -37,6 +37,11 @@ spec:
       containers:
         - name: main
           image: worker
+          env:
+            - name: DD_AGENT_HOST
+              value: dd-agent-datadog
+            - name: DD_TRACE_AGENT_PORT
+              value: "8126"
           readinessProbe:
             httpGet:
               port: 8080

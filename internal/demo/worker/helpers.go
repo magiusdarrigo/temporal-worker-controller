@@ -24,6 +24,15 @@ import (
 	"gopkg.in/DataDog/dd-trace-go.v1/profiler"
 )
 
+// Define a new counter metric
+var matteoTestCounter = prom.NewCounterVec(
+	prom.CounterOpts{
+		Name: "matteo_test_requests",
+		Help: "Counts the number of Matteo test events",
+	},
+	[]string{"workflow_version"},
+)
+
 func setActivityTimeout(ctx workflow.Context, d time.Duration) workflow.Context {
 	return workflow.WithActivityOptions(ctx, workflow.ActivityOptions{
 		ScheduleToCloseTimeout: d,
@@ -108,9 +117,13 @@ func configureObservability(buildID string) (l log.Logger, stopFunc func()) {
 }
 
 func newPrometheusScope(l log.Logger, c prometheus.Configuration) (tally.Scope, error) {
+	// Create a local registry and register matteoTestCounter there
+	customRegistry := prom.NewRegistry()
+	customRegistry.MustRegister(matteoTestCounter)
+
 	reporter, err := c.NewReporter(
 		prometheus.ConfigurationOptions{
-			Registry: prom.NewRegistry(),
+			Registry: customRegistry,
 			OnError: func(err error) {
 				l.Error("Error in prometheus reporter", "error", err)
 			},
@@ -126,7 +139,6 @@ func newPrometheusScope(l log.Logger, c prometheus.Configuration) (tally.Scope, 
 		SanitizeOptions: &sdktally.PrometheusSanitizeOptions,
 		Prefix:          "",
 	}
-
 	scope, _ := tally.NewRootScope(scopeOpts, time.Second)
 	scope = sdktally.NewPrometheusNamingScope(scope)
 
@@ -138,4 +150,9 @@ func mustGetEnv(key string) string {
 		return v
 	}
 	panic(fmt.Sprintf("environment variable %q must be set", key))
+}
+
+func doSomethingImportant(version string) {
+	// Increment the custom metric, labeled by workflow version
+	matteoTestCounter.WithLabelValues(version).Inc()
 }

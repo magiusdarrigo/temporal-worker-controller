@@ -14,6 +14,13 @@ import (
 
 func HelloWorld(ctx workflow.Context) (string, error) {
 	workflow.GetLogger(ctx).Info("HelloWorld workflow started")
+
+	// Use an environment variable for the workflow version
+	version := mustGetEnv("WORKER_BUILD_ID")
+
+	// Increment the labeled metric
+	doSomethingImportant(version)
+
 	ctx = setActivityTimeout(ctx, 5*time.Minute)
 
 	// Compute a subject
